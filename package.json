@@ -1,6 +1,6 @@
 {
   "name": "@sanity-labs/oclif-plugin-skills-flag",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Expose per-command Markdown to coding agents through an oclif flag",
   "author": "Sanity",
   "license": "MIT",

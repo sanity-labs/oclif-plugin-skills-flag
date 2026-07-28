@@ -24,9 +24,24 @@ async function createHost(
     join(projectRoot, "node_modules/@oclif/core"),
     join(root, "node_modules/@oclif/core"),
   )
-  await symlink(
-    projectRoot,
-    join(root, "node_modules/@sanity-labs/oclif-plugin-skills-flag"),
+  const pluginRoot = join(
+    root,
+    "node_modules/@sanity-labs/oclif-plugin-skills-flag",
+  )
+  await mkdir(pluginRoot)
+  await symlink(join(projectRoot, "src"), join(pluginRoot, "src"))
+  await writeFile(
+    join(pluginRoot, "package.json"),
+    JSON.stringify({
+      name: "@sanity-labs/oclif-plugin-skills-flag",
+      version: "0.0.0",
+      type: "module",
+      oclif: {
+        hooks: {
+          init: "./src/hooks/init.ts",
+        },
+      },
+    }),
   )
 
   await writeFile(
