@@ -7,7 +7,7 @@ const SKILLS_FLAGS = new Set(["--llms", "--skill"])
 export const llmsFlagConfig = {
   aliases: ["skill"],
   description: "Show agent-oriented guidance for this command",
-} as const
+}
 
 export function commandSkillFilename(commandId: string): string {
   const filename = commandId.replaceAll(":", "-") || "index"

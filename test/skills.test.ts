@@ -3,12 +3,22 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { describe, it } from "node:test"
+import { Flags } from "@oclif/core"
 import {
   commandSkillFilename,
   ensureFinalNewline,
   hasSkillsFlag,
+  llmsFlagConfig,
   readCommandSkill,
-} from "../src/skills.ts"
+} from "../src/index.ts"
+
+describe("llmsFlagConfig", () => {
+  it("can be passed directly to Flags.boolean", () => {
+    const flag = Flags.boolean(llmsFlagConfig)
+
+    assert.deepEqual(flag.aliases, ["skill"])
+  })
+})
 
 describe("commandSkillFilename", () => {
   it("maps command IDs to Markdown filenames", () => {
