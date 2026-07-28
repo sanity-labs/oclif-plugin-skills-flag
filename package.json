@@ -1,0 +1,63 @@
+{
+  "name": "@sanity-labs/oclif-plugin-skills-flag",
+  "version": "0.0.0",
+  "description": "Expose per-command Markdown to coding agents through an oclif flag",
+  "author": "Sanity",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "lint": "biome ci .",
+    "lint:fix": "biome check --write .",
+    "prepack": "npm test && npm run build",
+    "test": "npm run typecheck && node --test test/*.test.ts && npm run lint",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "peerDependencies": {
+    "@oclif/core": "^4.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.5",
+    "@oclif/core": "^4.11.14",
+    "@types/node": "^22.0.0",
+    "typescript": "^7.0.2"
+  },
+  "oclif": {
+    "hooks": {
+      "init": "./dist/hooks/init.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sanity-labs/oclif-plugin-skills-flag.git"
+  },
+  "bugs": "https://github.com/sanity-labs/oclif-plugin-skills-flag/issues",
+  "homepage": "https://github.com/sanity-labs/oclif-plugin-skills-flag#readme",
+  "keywords": [
+    "agent",
+    "llm",
+    "oclif",
+    "oclif-plugin",
+    "skill"
+  ]
+}
