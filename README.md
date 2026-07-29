@@ -43,14 +43,16 @@ Include `skills` in the CLI's npm `files` list if it has one.
 ## Configuration
 
 Add `oclif-plugin-skills-flag` at the top level of the CLI's `package.json` to change the runtime
-flag names or skills directory:
+behavior:
 
 ```json
 {
   "oclif-plugin-skills-flag": {
     "flag": "agents",
     "aliases": ["agent-help"],
-    "directory": "docs/agents"
+    "directory": "docs/agents",
+    "fallThroughOnMissingSkill": false,
+    "missingSkillMessage": "No agent instructions are available."
   }
 }
 ```
@@ -60,10 +62,18 @@ flag names or skills directory:
 | `flag` | string | `"llms"` | Main flag name, without leading dashes |
 | `aliases` | string[] | `["skill"]` | Additional names; one-character aliases use a single dash |
 | `directory` | string | `"skills"` | Skills directory relative to the CLI package root |
+| `fallThroughOnMissingSkill` | boolean | `false` | Let oclif continue processing when the skill file is missing |
+| `missingSkillMessage` | string | Command-specific message with the expected file path | Error shown when the skill file is missing |
 
 Configuration belongs to the CLI package that owns the command. If one oclif CLI is installed as a
 plugin in another, each CLI can use different flag names and directories for its own commands.
 Include the configured directory in the CLI's npm `files` list if it has one.
+
+When `fallThroughOnMissingSkill` is `true`, it takes precedence over `missingSkillMessage`. The hook
+returns without printing an error, and oclif continues its normal command lifecycle. A strict
+command that calls `this.parse()` reports an undeclared skills flag as nonexistent and prints error
+help. A command can instead declare the flag or use non-strict parsing to handle it. Consumers that
+enable fallthrough are responsible for handling or rejecting the flag.
 
 ## Show the flag in help
 
@@ -118,8 +128,9 @@ plugin behavior.
 ## Limitations
 
 - The plugin targets oclif v4.
-- Configured flag names take precedence over same-named host flags.
-- The init hook writes the skill and exits immediately. Later oclif lifecycle hooks do not run.
+- When a matching skill exists, configured flag names take precedence over same-named host flags.
+- When a matching skill exists, the init hook writes it and exits immediately. Later oclif
+  lifecycle hooks do not run.
 
 ## Development
 

@@ -108,6 +108,40 @@ describe("handleSkillsFlag", () => {
     assert.deepEqual(exits, [])
   })
 
+  it("uses a configured message when a skill is missing", async (t) => {
+    const root = await createRoot(t)
+    const { io } = runtime()
+
+    await assert.rejects(
+      handleSkillsFlag(
+        options(root, {
+          config: resolveSkillsFlagConfig({
+            missingSkillMessage: "Ask the CLI maintainers for guidance.",
+          }),
+        }),
+        io,
+      ),
+      /Ask the CLI maintainers for guidance\./,
+    )
+  })
+
+  it("falls through when configured and a skill is missing", async (t) => {
+    const root = await createRoot(t)
+    const { exits, io, writes } = runtime()
+
+    await handleSkillsFlag(
+      options(root, {
+        config: resolveSkillsFlagConfig({
+          fallThroughOnMissingSkill: true,
+          missingSkillMessage: "This message should not be used.",
+        }),
+      }),
+      io,
+    )
+    assert.deepEqual(writes, [])
+    assert.deepEqual(exits, [])
+  })
+
   it("uses configured names and directory", async (t) => {
     const root = await createRoot(t)
     await mkdir(join(root, "docs/agents"), { recursive: true })

@@ -5,22 +5,33 @@ const DEFAULT_DESCRIPTION = "Show agent-oriented guidance for this command"
 const DEFAULT_SKILLS_FLAG_CONFIG: SkillsFlagConfig = {
   aliases: ["skill"],
   directory: "skills",
+  fallThroughOnMissingSkill: false,
   flag: "llms",
 }
-const SKILLS_FLAG_CONFIG_OPTIONS = new Set(["aliases", "directory", "flag"])
+const SKILLS_FLAG_CONFIG_OPTIONS = new Set([
+  "aliases",
+  "directory",
+  "fallThroughOnMissingSkill",
+  "flag",
+  "missingSkillMessage",
+])
 
 export const skillsFlagConfigKey = "oclif-plugin-skills-flag"
 
 export interface SkillsFlagConfig {
   aliases: string[]
   directory: string
+  fallThroughOnMissingSkill: boolean
   flag: string
+  missingSkillMessage?: string
 }
 
 export interface SkillsFlagConfigInput {
   aliases?: readonly string[]
   directory?: string
+  fallThroughOnMissingSkill?: boolean
   flag?: string
+  missingSkillMessage?: string
 }
 
 export interface SkillsFlagDefinition {
@@ -103,12 +114,30 @@ export function resolveSkillsFlagConfig(
     throw new TypeError("Duplicate flag name in flag or aliases")
   }
 
+  const missingSkillMessage = options.missingSkillMessage
+  if (
+    missingSkillMessage !== undefined &&
+    (typeof missingSkillMessage !== "string" ||
+      missingSkillMessage.length === 0)
+  ) {
+    throw new TypeError("Missing skill message must be a non-empty string")
+  }
+
+  const fallThroughOnMissingSkill =
+    options.fallThroughOnMissingSkill ??
+    DEFAULT_SKILLS_FLAG_CONFIG.fallThroughOnMissingSkill
+  if (typeof fallThroughOnMissingSkill !== "boolean") {
+    throw new TypeError("Fall through on missing skill must be a boolean")
+  }
+
   return {
     aliases,
     directory: validateSkillsDirectory(
       options.directory ?? DEFAULT_SKILLS_FLAG_CONFIG.directory,
     ),
+    fallThroughOnMissingSkill,
     flag,
+    ...(missingSkillMessage === undefined ? {} : { missingSkillMessage }),
   }
 }
 

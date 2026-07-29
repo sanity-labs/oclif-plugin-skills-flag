@@ -30,18 +30,23 @@ describe("resolveSkillsFlagConfig", () => {
     assert.deepEqual(resolveSkillsFlagConfig(), {
       aliases: ["skill"],
       directory: "skills",
+      fallThroughOnMissingSkill: false,
       flag: "llms",
     })
     assert.deepEqual(
       resolveSkillsFlagConfig({
         aliases: ["agent-help", "instructions"],
         directory: "docs/agents",
+        fallThroughOnMissingSkill: true,
         flag: "agents",
+        missingSkillMessage: "No instructions for this command.",
       }),
       {
         aliases: ["agent-help", "instructions"],
         directory: "docs/agents",
+        fallThroughOnMissingSkill: true,
         flag: "agents",
+        missingSkillMessage: "No instructions for this command.",
       },
     )
   })
@@ -59,6 +64,9 @@ describe("resolveSkillsFlagConfig", () => {
       [{ directory: "docs/../skills" }, /Invalid skills directory/],
       [{ directory: "/tmp/skills" }, /Invalid skills directory/],
       [{ directory: "C:\\skills" }, /Invalid skills directory/],
+      [{ fallThroughOnMissingSkill: "yes" }, /must be a boolean/],
+      [{ missingSkillMessage: "" }, /message must be a non-empty string/],
+      [{ missingSkillMessage: false }, /message must be a non-empty string/],
       [{ unexpected: true }, /Unknown configuration option/],
     ]
 

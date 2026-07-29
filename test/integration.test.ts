@@ -14,7 +14,13 @@ const skillsFlagPluginName = "@sanity-labs/oclif-plugin-skills-flag"
 interface SkillsFlagFixtureConfig {
   aliases?: string[]
   directory?: string
+  fallThroughOnMissingSkill?: boolean
   flag?: string
+  missingSkillMessage?: string
+}
+
+interface HostFixtureOptions {
+  commandBehavior?: "default" | "handlesSkillsFlag" | "strict"
 }
 
 async function installSkillsFlagPlugin(root: string): Promise<void> {
@@ -40,6 +46,7 @@ async function createHost(
   t: TestContext,
   skill?: string,
   skillsFlagConfig?: SkillsFlagFixtureConfig,
+  options: HostFixtureOptions = {},
 ): Promise<{ bin: string; root: string }> {
   const root = await mkdtemp(join(tmpdir(), "skills-flag-integration-"))
   t.after(() => rm(root, { force: true, recursive: true }))
@@ -77,9 +84,9 @@ async function createHost(
     join(root, "bin/run.js"),
     "import {execute} from '@oclif/core'\nawait execute({dir: import.meta.url})\n",
   )
-  await writeFile(
-    join(root, "commands/hello.js"),
-    `import {Command} from '@oclif/core'
+
+  const commandSources = {
+    default: `import {Command} from '@oclif/core'
 
 export default class HelloCommand extends Command {
   static strict = false
@@ -89,6 +96,32 @@ export default class HelloCommand extends Command {
   }
 }
 `,
+    handlesSkillsFlag: `import {Command, Flags} from '@oclif/core'
+
+export default class HelloCommand extends Command {
+  static flags = {
+    llms: Flags.boolean(),
+  }
+
+  async run() {
+    const {flags} = await this.parse(HelloCommand)
+    this.log(\`COMMAND HANDLED SKILL: \${flags.llms}\`)
+  }
+}
+`,
+    strict: `import {Command} from '@oclif/core'
+
+export default class HelloCommand extends Command {
+  async run() {
+    await this.parse(HelloCommand)
+    this.log('COMMAND RAN')
+  }
+}
+`,
+  }
+  await writeFile(
+    join(root, "commands/hello.js"),
+    commandSources[options.commandBehavior ?? "default"],
   )
 
   if (skill !== undefined) {
@@ -298,6 +331,47 @@ describe("oclif plugin", () => {
 
     assert.equal(result.status, 2)
     assert.match(result.stderr, /Add it at docs\/agents\/hello\.md\./)
+    assert.doesNotMatch(result.stdout, /COMMAND RAN/)
+  })
+
+  it("uses a configured message when guidance is missing", async (t) => {
+    const host = await createHost(t, undefined, {
+      missingSkillMessage: "No instructions have been written yet.",
+    })
+    const result = run(host.root, host.bin, "hello", "--llms")
+
+    assert.equal(result.status, 2)
+    assert.match(result.stderr, /No instructions have been written yet\./)
+    assert.doesNotMatch(result.stderr, /Add it at/)
+    assert.doesNotMatch(result.stdout, /COMMAND RAN/)
+  })
+
+  it("lets a command handle the flag when fallthrough is enabled", async (t) => {
+    const host = await createHost(
+      t,
+      undefined,
+      { fallThroughOnMissingSkill: true },
+      { commandBehavior: "handlesSkillsFlag" },
+    )
+    const result = run(host.root, host.bin, "hello", "--llms")
+
+    assert.equal(result.status, 0)
+    assert.equal(result.stdout, "COMMAND HANDLED SKILL: true\n")
+    assert.equal(result.stderr, "")
+  })
+
+  it("leaves an undeclared flag to oclif when fallthrough is enabled", async (t) => {
+    const host = await createHost(
+      t,
+      undefined,
+      { fallThroughOnMissingSkill: true },
+      { commandBehavior: "strict" },
+    )
+    const result = run(host.root, host.bin, "hello", "--llms")
+
+    assert.equal(result.status, 2)
+    assert.match(result.stderr, /Nonexistent flag: --llms/)
+    assert.match(result.stderr, /USAGE/)
     assert.doesNotMatch(result.stdout, /COMMAND RAN/)
   })
 

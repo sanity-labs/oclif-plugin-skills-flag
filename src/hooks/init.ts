@@ -54,9 +54,12 @@ export async function handleSkillsFlag(
   )
 
   if (skill === undefined) {
+    if (options.config.fallThroughOnMissingSkill) return
+
     const commandName = skillCommandId.replaceAll(":", " ") || options.bin
     options.error(
-      `No agent guidance is available for \`${commandName}\`.\nAdd it at ${join(options.config.directory, filename)}.`,
+      options.config.missingSkillMessage ??
+        `No agent guidance is available for \`${commandName}\`.\nAdd it at ${join(options.config.directory, filename)}.`,
     )
     return
   }
