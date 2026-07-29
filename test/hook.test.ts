@@ -8,6 +8,7 @@ import {
   type SkillsFlagOptions,
   type SkillsFlagRuntime,
 } from "../src/hooks/init.ts"
+import { resolveSkillsFlagConfig } from "../src/skills.ts"
 
 class ExitSignal extends Error {
   code: number
@@ -34,6 +35,7 @@ function options(
     bin: "test-cli",
     commandExists: () => true,
     commandId: "functions:test",
+    config: resolveSkillsFlagConfig(),
     error: (message) => {
       throw new Error(message)
     },
@@ -104,6 +106,32 @@ describe("handleSkillsFlag", () => {
     )
     assert.deepEqual(writes, [])
     assert.deepEqual(exits, [])
+  })
+
+  it("uses configured names and directory", async (t) => {
+    const root = await createRoot(t)
+    await mkdir(join(root, "docs/agents"), { recursive: true })
+    await writeFile(
+      join(root, "docs/agents/functions-test.md"),
+      "Custom guidance.\n",
+    )
+    const { io, writes } = runtime()
+
+    await assert.rejects(
+      handleSkillsFlag(
+        options(root, {
+          argv: ["--agents"],
+          config: resolveSkillsFlagConfig({
+            aliases: [],
+            directory: "docs/agents",
+            flag: "agents",
+          }),
+        }),
+        io,
+      ),
+      (error: unknown) => error instanceof ExitSignal && error.code === 0,
+    )
+    assert.deepEqual(writes, ["Custom guidance.\n"])
   })
 
   it("does nothing when the flag is absent", async (t) => {

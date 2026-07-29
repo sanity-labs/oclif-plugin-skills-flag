@@ -1,10 +1,14 @@
 import { writeFileSync } from "node:fs"
+import { join } from "node:path"
 import type { Hook } from "@oclif/core"
 import {
   commandSkillFilename,
   ensureFinalNewline,
   hasSkillsFlag,
   readCommandSkill,
+  resolveSkillsFlagConfig,
+  type SkillsFlagConfig,
+  skillsFlagConfigKey,
 } from "../skills.ts"
 
 const SKILLS_FLAG_PLUGIN_NAME = "@sanity-labs/oclif-plugin-skills-flag"
@@ -19,6 +23,7 @@ export interface SkillsFlagOptions {
   bin: string
   commandExists(commandId: string): boolean
   commandId: string | undefined
+  config: SkillsFlagConfig
   error(message: string): void
   isSingleCommandCLI: boolean
   root: string
@@ -37,17 +42,21 @@ export async function handleSkillsFlag(
   options: SkillsFlagOptions,
   runtime: SkillsFlagRuntime = processRuntime,
 ): Promise<void> {
-  if (!hasSkillsFlag(options.argv)) return
+  if (!hasSkillsFlag(options.argv, options.config)) return
   if (!options.commandId || !options.commandExists(options.commandId)) return
 
   const skillCommandId = options.isSingleCommandCLI ? "" : options.commandId
   const filename = commandSkillFilename(skillCommandId)
-  const skill = await readCommandSkill(skillCommandId, options.root)
+  const skill = await readCommandSkill(
+    skillCommandId,
+    options.root,
+    options.config.directory,
+  )
 
   if (skill === undefined) {
     const commandName = skillCommandId.replaceAll(":", " ") || options.bin
     options.error(
-      `No agent guidance is available for \`${commandName}\`.\nAdd it at skills/${filename}.`,
+      `No agent guidance is available for \`${commandName}\`.\nAdd it at ${join(options.config.directory, filename)}.`,
     )
     return
   }
@@ -77,11 +86,26 @@ const hook: Hook.Init = async ({ argv, config, context, id }) => {
     commandDiscovery?.strategy === "single" &&
     Boolean(commandDiscovery.target)
 
+  let skillsFlagConfig: SkillsFlagConfig
+  try {
+    skillsFlagConfig = resolveSkillsFlagConfig(
+      commandPlugin.pjson[skillsFlagConfigKey],
+    )
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    context.error(
+      `Invalid skills flag configuration in ${commandPlugin.name}: ${message}`,
+      { code: "E_SKILLS_FLAG_CONFIG" },
+    )
+    return
+  }
+
   await handleSkillsFlag({
     argv,
     bin: config.bin,
     commandExists: (commandId) => config.findCommand(commandId) !== undefined,
     commandId: id,
+    config: skillsFlagConfig,
     error: (message) => context.error(message, { code: "E_SKILL_NOT_FOUND" }),
     isSingleCommandCLI,
     root: commandPlugin.root,

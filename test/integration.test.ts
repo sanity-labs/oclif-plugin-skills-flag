@@ -8,7 +8,14 @@ import { describe, it, type TestContext } from "node:test"
 import { fileURLToPath } from "node:url"
 
 const projectRoot = fileURLToPath(new URL("../", import.meta.url))
+const skillsFlagConfigKey = "oclif-plugin-skills-flag"
 const skillsFlagPluginName = "@sanity-labs/oclif-plugin-skills-flag"
+
+interface SkillsFlagFixtureConfig {
+  aliases?: string[]
+  directory?: string
+  flag?: string
+}
 
 async function installSkillsFlagPlugin(root: string): Promise<void> {
   const pluginRoot = join(root, "node_modules", skillsFlagPluginName)
@@ -32,6 +39,7 @@ async function installSkillsFlagPlugin(root: string): Promise<void> {
 async function createHost(
   t: TestContext,
   skill?: string,
+  skillsFlagConfig?: SkillsFlagFixtureConfig,
 ): Promise<{ bin: string; root: string }> {
   const root = await mkdtemp(join(tmpdir(), "skills-flag-integration-"))
   t.after(() => rm(root, { force: true, recursive: true }))
@@ -46,24 +54,25 @@ async function createHost(
   )
   await installSkillsFlagPlugin(root)
 
-  await writeFile(
-    join(root, "package.json"),
-    JSON.stringify({
-      name: "skills-flag-test-host",
-      version: "0.0.0",
-      type: "module",
-      dependencies: {
-        "@oclif/core": "^4.0.0",
-        [skillsFlagPluginName]: "0.0.0",
-      },
-      oclif: {
-        bin: "skills-test",
-        commands: "./commands",
-        plugins: [skillsFlagPluginName],
-        topicSeparator: " ",
-      },
-    }),
-  )
+  const packageJson: Record<string, unknown> = {
+    name: "skills-flag-test-host",
+    version: "0.0.0",
+    type: "module",
+    dependencies: {
+      "@oclif/core": "^4.0.0",
+      [skillsFlagPluginName]: "0.0.0",
+    },
+    oclif: {
+      bin: "skills-test",
+      commands: "./commands",
+      plugins: [skillsFlagPluginName],
+      topicSeparator: " ",
+    },
+  }
+  if (skillsFlagConfig !== undefined) {
+    packageJson[skillsFlagConfigKey] = skillsFlagConfig
+  }
+  await writeFile(join(root, "package.json"), JSON.stringify(packageJson))
   await writeFile(
     join(root, "bin/run.js"),
     "import {execute} from '@oclif/core'\nawait execute({dir: import.meta.url})\n",
@@ -83,8 +92,9 @@ export default class HelloCommand extends Command {
   )
 
   if (skill !== undefined) {
-    await mkdir(join(root, "skills"))
-    await writeFile(join(root, "skills/hello.md"), skill)
+    const directory = skillsFlagConfig?.directory ?? "skills"
+    await mkdir(join(root, directory), { recursive: true })
+    await writeFile(join(root, directory, "hello.md"), skill)
   }
 
   return { bin: join(root, "bin/run.js"), root }
@@ -92,7 +102,11 @@ export default class HelloCommand extends Command {
 
 async function createNestedHost(
   t: TestContext,
-  options: { hostUsesSkillsFlag: boolean },
+  options: {
+    childSkillsFlagConfig?: SkillsFlagFixtureConfig
+    hostSkillsFlagConfig?: SkillsFlagFixtureConfig
+    hostUsesSkillsFlag: boolean
+  },
 ): Promise<{ bin: string; root: string }> {
   const root = await mkdtemp(join(tmpdir(), "skills-flag-nested-"))
   t.after(() => rm(root, { force: true, recursive: true }))
@@ -108,22 +122,27 @@ async function createNestedHost(
   await installSkillsFlagPlugin(root)
 
   const childRoot = join(root, "node_modules/cli-one")
+  const childDirectory = options.childSkillsFlagConfig?.directory ?? "skills"
   await mkdir(join(childRoot, "commands"), { recursive: true })
-  await mkdir(join(childRoot, "skills"))
+  await mkdir(join(childRoot, childDirectory), { recursive: true })
+  const childPackageJson: Record<string, unknown> = {
+    name: "cli-one",
+    version: "0.0.0",
+    type: "module",
+    dependencies: {
+      [skillsFlagPluginName]: "0.0.0",
+    },
+    oclif: {
+      commands: "./commands",
+      plugins: [skillsFlagPluginName],
+    },
+  }
+  if (options.childSkillsFlagConfig !== undefined) {
+    childPackageJson[skillsFlagConfigKey] = options.childSkillsFlagConfig
+  }
   await writeFile(
     join(childRoot, "package.json"),
-    JSON.stringify({
-      name: "cli-one",
-      version: "0.0.0",
-      type: "module",
-      dependencies: {
-        [skillsFlagPluginName]: "0.0.0",
-      },
-      oclif: {
-        commands: "./commands",
-        plugins: [skillsFlagPluginName],
-      },
-    }),
+    JSON.stringify(childPackageJson),
   )
   await writeFile(
     join(childRoot, "commands/from-cli-one.js"),
@@ -138,7 +157,10 @@ export default class FromCliOneCommand extends Command {
 }
 `,
   )
-  await writeFile(join(childRoot, "skills/from-cli-one.md"), "CLI ONE SKILL\n")
+  await writeFile(
+    join(childRoot, childDirectory, "from-cli-one.md"),
+    "CLI ONE SKILL\n",
+  )
 
   const dependencies: Record<string, string> = {
     "@oclif/core": "^4.0.0",
@@ -150,21 +172,22 @@ export default class FromCliOneCommand extends Command {
     plugins.push(skillsFlagPluginName)
   }
 
-  await writeFile(
-    join(root, "package.json"),
-    JSON.stringify({
-      name: "cli-two",
-      version: "0.0.0",
-      type: "module",
-      dependencies,
-      oclif: {
-        bin: "cli-two",
-        commands: "./commands",
-        plugins,
-        topicSeparator: " ",
-      },
-    }),
-  )
+  const hostPackageJson: Record<string, unknown> = {
+    name: "cli-two",
+    version: "0.0.0",
+    type: "module",
+    dependencies,
+    oclif: {
+      bin: "cli-two",
+      commands: "./commands",
+      plugins,
+      topicSeparator: " ",
+    },
+  }
+  if (options.hostSkillsFlagConfig !== undefined) {
+    hostPackageJson[skillsFlagConfigKey] = options.hostSkillsFlagConfig
+  }
+  await writeFile(join(root, "package.json"), JSON.stringify(hostPackageJson))
   await writeFile(
     join(root, "bin/run.js"),
     "import {execute} from '@oclif/core'\nawait execute({dir: import.meta.url})\n",
@@ -185,7 +208,14 @@ export default class FromCliTwoCommand extends Command {
 }
 `,
   )
-  await writeFile(join(root, "skills/from-cli-two.md"), "CLI TWO SKILL\n")
+  const hostDirectory = options.hostSkillsFlagConfig?.directory ?? "skills"
+  if (hostDirectory !== "skills") {
+    await mkdir(join(root, hostDirectory), { recursive: true })
+  }
+  await writeFile(
+    join(root, hostDirectory, "from-cli-two.md"),
+    "CLI TWO SKILL\n",
+  )
 
   return { bin: join(root, "bin/run.js"), root }
 }
@@ -236,6 +266,54 @@ describe("oclif plugin", () => {
     assert.equal(result.stdout, "COMMAND RAN\n")
     assert.equal(result.stderr, "")
   })
+
+  it("uses configured flag names and skills directory", async (t) => {
+    const host = await createHost(t, "Custom agent instructions", {
+      aliases: ["agent-help"],
+      directory: "docs/agents",
+      flag: "agents",
+    })
+
+    for (const flag of ["--agents", "--agent-help"]) {
+      const result = run(host.root, host.bin, "hello", flag)
+
+      assert.equal(result.status, 0)
+      assert.equal(result.stdout, "Custom agent instructions\n")
+      assert.equal(result.stderr, "")
+      assert.doesNotMatch(result.stdout, /COMMAND RAN/)
+    }
+
+    const defaultFlag = run(host.root, host.bin, "hello", "--llms")
+    assert.equal(defaultFlag.status, 0)
+    assert.equal(defaultFlag.stdout, "COMMAND RAN\n")
+    assert.equal(defaultFlag.stderr, "")
+  })
+
+  it("reports a configured skills directory when guidance is missing", async (t) => {
+    const host = await createHost(t, undefined, {
+      directory: "docs/agents",
+      flag: "agents",
+    })
+    const result = run(host.root, host.bin, "hello", "--agents")
+
+    assert.equal(result.status, 2)
+    assert.match(result.stderr, /Add it at docs\/agents\/hello\.md\./)
+    assert.doesNotMatch(result.stdout, /COMMAND RAN/)
+  })
+
+  it("reports invalid package configuration", async (t) => {
+    const host = await createHost(t, undefined, { flag: "--agents" })
+    const result = run(host.root, host.bin, "hello", "--agents")
+
+    assert.equal(result.status, 2)
+    assert.match(
+      result.stderr,
+      /Invalid skills flag configuration in skills-flag-test-host: Invalid/,
+    )
+    assert.match(result.stderr, /flag name: expected/)
+    assert.match(result.stderr, /E_SKILLS_FLAG_CONFIG/)
+    assert.doesNotMatch(result.stdout, /COMMAND RAN/)
+  })
 })
 
 describe("nested oclif plugins", () => {
@@ -272,4 +350,40 @@ describe("nested oclif plugins", () => {
       })
     }
   }
+
+  it("keeps different owner configurations isolated", async (t) => {
+    const host = await createNestedHost(t, {
+      childSkillsFlagConfig: {
+        aliases: ["one-skill"],
+        directory: "one-guides",
+        flag: "one-docs",
+      },
+      hostSkillsFlagConfig: {
+        aliases: ["two-skill"],
+        directory: "two-guides",
+        flag: "two-docs",
+      },
+      hostUsesSkillsFlag: true,
+    })
+
+    const child = run(host.root, host.bin, "from-cli-one", "--one-docs")
+    assert.equal(child.status, 0)
+    assert.equal(child.stdout, "CLI ONE SKILL\n")
+    assert.equal(child.stderr, "")
+
+    const parent = run(host.root, host.bin, "from-cli-two", "--two-docs")
+    assert.equal(parent.status, 0)
+    assert.equal(parent.stdout, "CLI TWO SKILL\n")
+    assert.equal(parent.stderr, "")
+
+    const otherOwnerFlag = run(
+      host.root,
+      host.bin,
+      "from-cli-one",
+      "--two-docs",
+    )
+    assert.equal(otherOwnerFlag.status, 0)
+    assert.equal(otherOwnerFlag.stdout, "CLI ONE COMMAND RAN\n")
+    assert.equal(otherOwnerFlag.stderr, "")
+  })
 })
