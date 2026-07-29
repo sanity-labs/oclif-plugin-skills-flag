@@ -7,6 +7,8 @@ import {
   readCommandSkill,
 } from "../skills.ts"
 
+const SKILLS_FLAG_PLUGIN_NAME = "@sanity-labs/oclif-plugin-skills-flag"
+
 export interface SkillsFlagRuntime {
   exit(code: number): never
   write(output: string): void
@@ -55,14 +57,34 @@ export async function handleSkillsFlag(
 }
 
 const hook: Hook.Init = async ({ argv, config, context, id }) => {
+  if (!id) return
+
+  // oclif runs transitive init hooks across the assembled CLI, so find the command's actual owner.
+  const command = config.findCommand(id)
+  const commandPlugin = command?.pluginName
+    ? config.plugins.get(command.pluginName)
+    : undefined
+
+  // A child CLI's dependency on this plugin must not opt the parent CLI's commands in.
+  if (!commandPlugin?.pjson.oclif.plugins?.includes(SKILLS_FLAG_PLUGIN_NAME)) {
+    return
+  }
+
+  // Command shape and skill files belong to the owner, not necessarily the outer host CLI.
+  const commandDiscovery = commandPlugin.pjson.oclif.commands
+  const isSingleCommandCLI =
+    typeof commandDiscovery !== "string" &&
+    commandDiscovery?.strategy === "single" &&
+    Boolean(commandDiscovery.target)
+
   await handleSkillsFlag({
     argv,
     bin: config.bin,
     commandExists: (commandId) => config.findCommand(commandId) !== undefined,
     commandId: id,
     error: (message) => context.error(message, { code: "E_SKILL_NOT_FOUND" }),
-    isSingleCommandCLI: config.isSingleCommandCLI,
-    root: config.root,
+    isSingleCommandCLI,
+    root: commandPlugin.root,
   })
 }
 
