@@ -57,13 +57,13 @@ behavior:
 }
 ```
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `flag` | string | `"llms"` | Main flag name, without leading dashes |
-| `aliases` | string[] | `["skill"]` | Additional names; one-character aliases use a single dash |
-| `directory` | string | `"skills"` | Skills directory relative to the CLI package root |
-| `fallThroughOnMissingSkill` | boolean | `false` | Let oclif continue processing when the skill file is missing |
-| `missingSkillMessage` | string | Command-specific message with the expected file path | Error shown when the skill file is missing |
+| Option                      | Type     | Default                                              | Description                                                  |
+| --------------------------- | -------- | ---------------------------------------------------- | ------------------------------------------------------------ |
+| `flag`                      | string   | `"llms"`                                             | Main flag name, without leading dashes                       |
+| `aliases`                   | string[] | `["skill"]`                                          | Additional names; one-character aliases use a single dash    |
+| `directory`                 | string   | `"skills"`                                           | Skills directory relative to the CLI package root            |
+| `fallThroughOnMissingSkill` | boolean  | `false`                                              | Let oclif continue processing when the skill file is missing |
+| `missingSkillMessage`       | string   | Command-specific message with the expected file path | Error shown when the skill file is missing                   |
 
 Configuration belongs to the CLI package that owns the command. If one oclif CLI is installed as a
 plugin in another, each CLI can use different flag names and directories for its own commands.
@@ -83,14 +83,14 @@ To advertise the default `--llms` flag, add the exported definition to the CLI's
 command and set `hidden` to `false`:
 
 ```ts
-import {Command, Flags} from '@oclif/core'
-import {llmsFlagConfig} from '@sanity-labs/oclif-plugin-skills-flag'
+import { Command, Flags } from "@oclif/core";
+import { llmsFlagConfig } from "@sanity-labs/oclif-plugin-skills-flag";
 
 export abstract class BaseCommand extends Command {
   static baseFlags = {
     ...super.baseFlags,
-    llms: Flags.boolean({...llmsFlagConfig, hidden: false}),
-  }
+    llms: Flags.boolean({ ...llmsFlagConfig, hidden: false }),
+  };
 }
 ```
 
@@ -99,25 +99,25 @@ The plugin handles the flag, so command implementations do not need to read `fla
 For custom names, create a matching definition:
 
 ```ts
-import {Command, Flags} from '@oclif/core'
-import {createSkillsFlagDefinition} from '@sanity-labs/oclif-plugin-skills-flag'
+import { Command, Flags } from "@oclif/core";
+import { createSkillsFlagDefinition } from "@sanity-labs/oclif-plugin-skills-flag";
 
 const skillsFlag = createSkillsFlagDefinition(
   {
-    flag: 'agents',
-    aliases: ['agent-help'],
+    flag: "agents",
+    aliases: ["agent-help"],
   },
   {
-    description: 'Show instructions for coding agents',
+    description: "Show instructions for coding agents",
     hidden: false,
   },
-)
+);
 
 export abstract class BaseCommand extends Command {
   static baseFlags = {
     ...super.baseFlags,
     [skillsFlag.name]: Flags.boolean(skillsFlag.definition),
-  }
+  };
 }
 ```
 
@@ -127,7 +127,7 @@ plugin behavior.
 
 ## Limitations
 
-- The plugin targets oclif v4.
+- The plugin targets oclif v5.
 - When a matching skill exists, configured flag names take precedence over same-named host flags.
 - When a matching skill exists, the init hook writes it and exits immediately. Later oclif
   lifecycle hooks do not run.
