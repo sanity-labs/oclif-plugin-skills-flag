@@ -143,3 +143,15 @@ npm test
 
 Run `npm run build` to create the publishable files in `dist/`. Use `npm run lint:fix` to apply
 Biome formatting and safe lint fixes.
+
+## Releasing
+
+Publishing to npm runs from `.github/workflows/release.yml`, triggered by a published GitHub release. Merging to `main` does not publish.
+
+1. Bump the version with `npm version <patch|minor|major> --no-git-tag-version` and commit it.
+2. Merge that commit to `main`.
+3. Create the release from `main`: `gh release create v<version> --target main --generate-notes`.
+
+The workflow refuses to publish unless the tag equals `v` plus the `package.json` version and the tagged commit is an ancestor of `main`. Tag after merging, not before: a squash or rebase merge rewrites the commit, and a tag on the pre-merge SHA fails the ancestry check.
+
+The job authenticates through npm trusted publishing (OIDC) rather than a token, so renaming the workflow file or the `npm-publish` environment requires updating the trusted publisher settings on npmjs.com.
