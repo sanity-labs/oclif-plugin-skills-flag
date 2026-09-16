@@ -30,12 +30,12 @@
     "node": ">=22"
   },
   "peerDependencies": {
-    "@oclif/core": "^4.0.0"
+    "@oclif/core": "^5.0.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.5",
-    "@oclif/core": "^4.11.14",
-    "@types/node": "^22.0.0",
+    "@biomejs/biome": "2.5.14",
+    "@oclif/core": "^5.0.0",
+    "@types/node": "^22.20.3",
     "typescript": "^7.0.2"
   },
   "oclif": {
