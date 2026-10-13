@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Guidance for coding agents working on `@sanity-labs/oclif-plugin-skills-flag`, an ESM
-TypeScript plugin for oclif v4. The published code supports Node 22 and later. Development uses
+TypeScript plugin for oclif v5. The published code supports Node 22 and later. Development uses
 Node 24 through mise.
 
 ## Commands
@@ -43,4 +43,3 @@ Node 24 through mise.
 
 Biome is authoritative. Use spaces, omit semicolons, and keep trailing commas where JavaScript
 allows them. Comments should explain constraints the code cannot show.
-

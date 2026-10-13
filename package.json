@@ -33,8 +33,8 @@
     "@oclif/core": "^5.0.0"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.14",
-    "@oclif/core": "^5.0.0",
+    "@biomejs/biome": "2.5.15",
+    "@oclif/core": "^5.1.8",
     "@types/node": "^22.20.3",
     "typescript": "^7.0.2"
   },

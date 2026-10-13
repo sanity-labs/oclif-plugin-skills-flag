@@ -1,6 +1,6 @@
 # @sanity-labs/oclif-plugin-skills-flag
 
-Adds `--llms` and its `--skill` alias to every command in an oclif v4 CLI. The flag prints
+Adds `--llms` and its `--skill` alias to every command in an oclif v5 CLI. The flag prints
 command-specific Markdown for coding agents, then exits without running the command.
 
 ## Install
